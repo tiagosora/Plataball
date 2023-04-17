@@ -2,7 +2,7 @@
 
 const helper = {
 
-    initEmptyScene: function (sceneElements) {
+    initEmptyScene: function (sceneElements, innitLookingHeight) {
 
         // Create the 3D scene
         sceneElements.sceneGraph = new THREE.Scene();
@@ -16,7 +16,7 @@ const helper = {
         camera.position.set(2, 4, 2);
         camera.lookAt(0, 8, 0);
         sceneElements.control = new THREE.OrbitControls(camera);
-        sceneElements.control.target.set( 0,2,0 );
+        sceneElements.control.target.set( 0,innitLookingHeight,0 );
         sceneElements.control.screenSpacePanning = true;
 
         // Illumination

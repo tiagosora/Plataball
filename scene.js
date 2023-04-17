@@ -3,9 +3,17 @@
 
 // To store the scene graph, and elements usefull to rendering the scene
 var PI = Math.PI
-var delta = 0.01
 var lvlPlataforms = []
 var lastHeight;
+let lookingHeight = 2
+let newLookingHeight = lookingHeight
+let lvlCompleted = false;
+var ballSize = 0.1;
+var bounce_step = -0.005
+var grossura = 0.3;
+var gap = 0.05;
+var baseLargura = 0.80;
+var collumnHeight = 1000;
 
 const sceneElements = {
     sceneGraph: null,
@@ -14,22 +22,22 @@ const sceneElements = {
     renderer: null,
 };
 
-const lstDefTower = [   ["X","O","O","O","O","O","O","O"],
-                        ["X","X","X","O","X","O","O","X"],
-                        ["X","O","O","X","O","X","X","O"],
-                        ["X","O","X","O","O","X","X","O"],
-                        ["X","O","O","O","O","O","O","O"],
-                        ["X","X","X","O","X","O","O","X"],
-                        ["X","O","O","X","O","X","X","O"],
-                        ["X","O","X","O","O","X","X","O"],
-                        ["X","O","O","O","O","O","O","O"],
-                        ["X","X","X","O","X","O","O","X"],
-                        ["X","O","O","X","O","X","X","O"],
-                        ["X","O","X","O","O","X","X","O"]
-                    ]
+var lstDefTower = [ ["X","O","O","O","O","O","O","O"],
+                    ["X","X","X","O","X","O","O","X"],
+                    ["X","O","O","X","O","X","X","O"],
+                    ["X","O","X","O","O","X","X","O"],
+                    ["X","O","O","O","O","O","O","O"],
+                    ["X","X","X","O","X","O","O","X"],
+                    ["X","O","O","X","O","X","X","O"],
+                    ["X","O","X","O","O","X","X","O"],
+                    ["X","O","O","O","O","O","O","O"],
+                    ["X","X","X","O","X","O","O","X"],
+                    ["X","O","O","X","O","X","X","O"],
+                    ["X","O","X","O","O","X","X","O"]
+                ]
 
 
-helper.initEmptyScene(sceneElements);
+helper.initEmptyScene(sceneElements, lookingHeight);
 load3DObjects(sceneElements.sceneGraph);
 requestAnimationFrame(computeFrame);
 
@@ -68,21 +76,21 @@ function onDocumentKeyUp(event) {
 function load3DObjects(sceneGraph) {
 
     // --- Add coordinate AXIS to the scene  --- 
+
     const axes = new THREE.AxesHelper(60);
     sceneGraph.add(axes);
 
     // --- Create a ground plane --- 
-    const planeGeometry = new THREE.PlaneGeometry(10,10);
-    const planeMaterial = new THREE.MeshBasicMaterial({ color: 'rgb(200, 200, 200)', side: THREE.DoubleSide });
-    const planeObject = new THREE.Mesh(planeGeometry, planeMaterial);
-    sceneGraph.add(planeObject);
-    planeObject.rotateOnAxis(new THREE.Vector3(1, 0, 0), PI / 2);
-    planeObject.receiveShadow = true;
+    // const planeGeometry = new THREE.PlaneGeometry(10,10);
+    // const planeMaterial = new THREE.MeshBasicMaterial({ color: 'rgb(200, 200, 200)', side: THREE.DoubleSide });
+    // const planeObject = new THREE.Mesh(planeGeometry, planeMaterial);
+    // sceneGraph.add(planeObject);
+    // planeObject.rotateOnAxis(new THREE.Vector3(1, 0, 0), PI / 2);
+    // planeObject.receiveShadow = true;
     
     // --- Create the tower  --- 
-    let lvlTower = createLevel(lstDefTower)
-    lvlPlataforms = lvlTower.lstPlataforms;
-    lastHeight = lvlTower.placeHeight;
+
+    lvlPlataforms = createLevel(lstDefTower);
 
     const ball = createBall();
     ball.position.x = 0.50*Math.cos(PI/4)
@@ -92,9 +100,9 @@ function load3DObjects(sceneGraph) {
     sceneGraph.add(ball);
 
     // --- Create the ball  ---
+
     function createBall() {
         // Create Geometry
-        const ballSize = 0.1
         const ballGeometry = new THREE.SphereGeometry(ballSize,64,32);
         // Create Material
         const colorballMaterial = 0xFF0000;
@@ -105,24 +113,31 @@ function load3DObjects(sceneGraph) {
     }
 
     function createLevel(lstDefTower) {
-        const grossura = 0.3;
-        const gap = 0.05;
-        let placeHeight;
+        createCollunm();
+        createBase();
+        return createLvlPlataforms();
+    }
+
+    function createLvlPlataforms() {
         let lstPlataforms = [];
+
+        let placeHeight = grossura / 4 - gap;
+        let platformRotationAngle = 0;
         for (let i = 0; i < lstDefTower.length; i++){
-            let plataform = createPlatform(lstDefTower[i], grossura);
-            placeHeight = 0.1+grossura + grossura*0.5*i + gap*i;
+            let plataform = createPlatform(lstDefTower[i]);
+            placeHeight += grossura / 2 + gap;
             plataform.position.y = placeHeight;
-            plataform.rotation.y = Math.random();
-            // plataform.name = "plataform"+i.toString()
+            plataform.rotation.y = platformRotationAngle;
+            platformRotationAngle -= 0.1;
             sceneGraph.add(plataform);
             lstPlataforms.push(plataform);
         }
-        createCollunm()
-        return {lstPlataforms, placeHeight}
+
+        lastHeight = placeHeight;
+        return lstPlataforms;
     }
 
-    function createPlatform(lstDefPlatform, grossura) {
+    function createPlatform(lstDefPlatform) {
         // --- Create Platform
         const plataformGroup = new THREE.Object3D()
 
@@ -180,8 +195,6 @@ function load3DObjects(sceneGraph) {
 
     function createCollunm() {
         // Create Geometry
-        const collumnHeight = 1000;
-        const grossura = 0.35
         const collumnGeometry = new THREE.CylinderGeometry(grossura,grossura,collumnHeight,64);
         // Create Material
         const colorCollumnMaterial = 0x0FFFFF;
@@ -191,16 +204,28 @@ function load3DObjects(sceneGraph) {
         collumn.position.y = collumnHeight/2
         sceneGraph.add(collumn);
     }
+
+    function createBase(){
+        // Create Geometry
+        const baseGeometry = new THREE.CylinderGeometry(baseLargura,baseLargura,grossura/2,64);
+        // Create Material
+        const colorBaseMaterial = 0x808080;
+        const colorWireframe = 0x000000;
+        const baseMaterial = new THREE.MeshBasicMaterial({ color: colorBaseMaterial });
+        const wireframeMaterial = new THREE.MeshBasicMaterial({color: colorWireframe, wireframe: true});
+        // Create Base
+        const base =  new THREE.Mesh(baseGeometry, baseMaterial);
+        const wireframe = new THREE.Mesh(baseGeometry, wireframeMaterial);
+        base.position.y = grossura/4;
+        wireframe.position.y = grossura/4;
+        sceneGraph.add(base);
+        sceneGraph.add(wireframe);
+    }
 }
 
-var bounce_step = -0.005
 function computeFrame(time) {
 
-    // const plataform = sceneElements.sceneGraph.getObjectByName("plataform1");
-    // for (const plataform in lvlPlataforms){
-    //     console.log(plataform)
-    //     plataform.rotation.y += delta;
-    // }
+    // CONSTS
 
     const ball = sceneElements.sceneGraph.getObjectByName("ball");
     const ballSize = ball.geometry.parameters.radius;
@@ -218,7 +243,7 @@ function computeFrame(time) {
 
     // BOUNCE THE BALL
     
-    if(ball.position.y<=lastHeight+ballSize+0.07 && SPACE != true){
+    if(ball.position.y<=lastHeight+ballSize+gap && SPACE != true){
         bounce_step = 0.005;
     }
     if(ball.position.y>lastHeight+0.5 || SPACE === true){
@@ -228,6 +253,33 @@ function computeFrame(time) {
         }
     }
     ball.position.y += bounce_step;
+
+    // REMOVE THE PLATFORM
+
+    if (lvlPlataforms.length>0){
+        const lastPlatform = lvlPlataforms[lvlPlataforms.length-1];
+    
+        if (ball.position.y <= lastPlatform.position.y+grossura/4+gap){
+            sceneElements.sceneGraph.remove(lastPlatform);
+            lvlPlataforms.splice(lvlPlataforms.length-1,1);
+            lastHeight -= (grossura/2 + gap);
+            newLookingHeight -=  (grossura/2 + gap);
+            if (lvlPlataforms.length === 0){
+                lastHeight += gap;
+                newLookingHeight -= gap;
+            }
+            // sceneElements.camera.position.y -= 0.20;
+        }
+    } else {
+        lvlCompleted = true;
+    }
+
+
+    if (newLookingHeight < lookingHeight){
+        lookingHeight -= 0.01;
+        sceneElements.camera.position.y -= 0.01
+        sceneElements.control.target.set( 0,lookingHeight,0);
+    }
     
     // Rendering
     helper.render(sceneElements);
