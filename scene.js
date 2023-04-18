@@ -1,20 +1,15 @@
 "use strict";
 
+// Constants
 
-// To store the scene graph, and elements usefull to rendering the scene
-var PI = Math.PI
-var lvlPlataforms = []
-var lastHeight;
-let lookingHeight = 2
-let newLookingHeight = lookingHeight
-let lvlCompleted = false;
-var ballSize = 0.1;
-var bounce_step = -0.005
-var grossura = 0.3;
-var gap = 0.05;
-var baseLargura = 0.80;
-var collumnHeight = 1000;
-
+const PI = Math.PI;
+const ballSize = 0.1;
+const ballExtraHeight = 0.5;
+const grossura = 0.3;
+const gap = 0.05;
+const baseLargura = 0.80;
+const collumnHeight = 1000;
+const platformRotationAngle = 0.075;
 const sceneElements = {
     sceneGraph: null,
     camera: null,
@@ -22,31 +17,37 @@ const sceneElements = {
     renderer: null,
 };
 
-var lstDefTower = [ ["X","O","O","O","O","O","O","O"],
-                    ["X","X","X","O","X","O","O","X"],
-                    ["X","O","O","X","O","X","X","O"],
-                    ["X","O","X","O","O","X","X","O"],
-                    ["X","O","O","O","O","O","O","O"],
-                    ["X","X","X","O","X","O","O","X"],
-                    ["X","O","O","X","O","X","X","O"],
-                    ["X","O","X","O","O","X","X","O"],
-                    ["X","O","O","O","O","O","O","O"],
-                    ["X","X","X","O","X","O","O","X"],
-                    ["X","O","O","X","O","X","X","O"],
-                    ["X","O","X","O","O","X","X","O"]
-                ]
+// Variables
+
+var lstDefTower;
+var lvlPlataforms = [];
+var bounce_step;
+var lastHeight;
+var cameraHeight;
+var lookingHeight; 
+var newLookingHeight;
+var lvlCompleted;
+var falling;
+// var startMessage;
 
 
-helper.initEmptyScene(sceneElements, lookingHeight);
+// Keys
+
+var SPACE = false;
+
+// Init Scene
+
+helper.initEmptyScene(sceneElements);
 load3DObjects(sceneElements.sceneGraph);
 requestAnimationFrame(computeFrame);
 
-// EVENT LISTENERS
+// Event Listeners
 
-var SPACE = false;
 window.addEventListener('resize', resizeWindow);
 document.addEventListener('keydown', onDocumentKeyDown, false);
 document.addEventListener('keyup', onDocumentKeyUp, false);
+
+// Functions
 
 function resizeWindow(eventParam) {
     const width = window.innerWidth;
@@ -62,6 +63,10 @@ function onDocumentKeyDown(event) {
     switch (event.keyCode) {
         case 32: // <--
             SPACE = true;
+            // if (startMessage) {
+            //     sceneGraph.remove(startMessage);
+            //     startMessage = undefined;
+            // }
             break;
     }
 }
@@ -74,6 +79,23 @@ function onDocumentKeyUp(event) {
 }
 
 function load3DObjects(sceneGraph) {
+
+    lstDefTower = [ ["X","O","O","O","O","O","O","O"],
+                    ["X","X","X","O","X","O","O","X"],
+                    ["X","O","O","X","O","X","X","O"],
+                    ["X","O","X","O","O","X","X","O"],
+                    ["X","O","O","O","O","O","O","O"],
+                    ["X","X","X","O","X","O","O","X"],
+                    ["X","O","O","X","O","X","X","O"],
+                    ["X","O","X","O","O","X","X","O"],
+                    ["X","O","O","O","O","O","O","O"], // Fim
+                ]
+
+    // --- Init Variables ---
+
+    lvlCompleted = false;
+    falling = false;
+    bounce_step = -0.005;
 
     // --- Add coordinate AXIS to the scene  --- 
 
@@ -90,16 +112,62 @@ function load3DObjects(sceneGraph) {
     
     // --- Create the tower  --- 
 
-    lvlPlataforms = createLevel(lstDefTower);
+    createLevel(lstDefTower);
 
-    const ball = createBall();
-    ball.position.x = 0.50*Math.cos(PI/4)
-    ball.position.z = 0.50*Math.cos(PI/4)
-    ball.position.y = lastHeight+0.5;
-    ball.name = "ball";
-    sceneGraph.add(ball);
+    function createLevel(lstDefTower) {
+        // createStartMessage();
+        createCollunm();
+        createBase();
+        createLvlPlataforms();
+        createBall();
+        adjustCamera();
+    }
 
-    // --- Create the ball  ---
+    function createStartMessage(){
+        // Create a div element for the start message
+        const startDiv = document.createElement('div');
+        startDiv.innerHTML = 'Press spacebar to start';
+        startDiv.style.position = 'absolute';
+        startDiv.style.top = '50%';
+        startDiv.style.left = '50%';
+        startDiv.style.transform = 'translate(-50%, -50%)';
+        startDiv.style.color = 'white';
+        startDiv.style.fontSize = '2em';
+        document.body.appendChild(startDiv);
+
+        // Create a TextGeometry object from the div
+        const startGeometry = new THREE.TextGeometry(startDiv.innerHTML, {
+            font: font,
+            size: 0.5,
+            height: 0.2,
+            curveSegments: 12,
+            bevelEnabled: true,
+            bevelThickness: 0.03,
+            bevelSize: 0.02,
+            bevelOffset: 0,
+            bevelSegments: 5
+        });
+
+        // Create a material and mesh for the geometry
+        const startMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const startMesh = new THREE.Mesh(startGeometry, startMaterial);
+        startMesh.position.set(-2, 1, -2);
+        startMesh.rotation.y = -Math.PI / 4;
+        startMessage = startMesh;
+
+        // Add the mesh to the scene
+        sceneGraph.add(startMesh);
+    }
+
+    function adjustCamera() {
+        // --- Adjust camera to lvl ---
+        cameraHeight = lastHeight + 1.25;
+        lookingHeight = cameraHeight - 2;
+        newLookingHeight = lookingHeight;
+
+        sceneElements.camera.position.set(2, cameraHeight, 2);
+        sceneElements.control.target.set(0, lookingHeight, 0);
+    }
 
     function createBall() {
         // Create Geometry
@@ -109,32 +177,31 @@ function load3DObjects(sceneGraph) {
         const ballMaterial = new THREE.MeshBasicMaterial({ color: colorballMaterial });
         // Create ball
         const ball = new THREE.Mesh( ballGeometry, ballMaterial );
-        return ball;
-    }
-
-    function createLevel(lstDefTower) {
-        createCollunm();
-        createBase();
-        return createLvlPlataforms();
+        
+        ball.position.x = 0.50*Math.cos(PI/4)
+        ball.position.z = 0.50*Math.cos(PI/4)
+        ball.position.y = lastHeight+ballExtraHeight;
+        ball.name = "ball";
+        sceneGraph.add(ball);
     }
 
     function createLvlPlataforms() {
         let lstPlataforms = [];
 
         let placeHeight = grossura / 4 - gap;
-        let platformRotationAngle = 0;
+        let angle = 0;
         for (let i = 0; i < lstDefTower.length; i++){
             let plataform = createPlatform(lstDefTower[i]);
             placeHeight += grossura / 2 + gap;
             plataform.position.y = placeHeight;
-            plataform.rotation.y = platformRotationAngle;
-            platformRotationAngle -= 0.1;
+            plataform.rotation.y = angle;
+            angle -= platformRotationAngle;
             sceneGraph.add(plataform);
             lstPlataforms.push(plataform);
         }
 
         lastHeight = placeHeight;
-        return lstPlataforms;
+        lvlPlataforms = lstPlataforms;
     }
 
     function createPlatform(lstDefPlatform) {
@@ -243,15 +310,28 @@ function computeFrame(time) {
 
     // BOUNCE THE BALL
     
-    if(ball.position.y<=lastHeight+ballSize+gap && SPACE != true){
+    if(ball.position.y <= lastHeight + ballSize + gap && (SPACE === false || lvlCompleted === true)){
         bounce_step = 0.005;
     }
-    if(ball.position.y>lastHeight+0.5 || SPACE === true){
-        bounce_step = -0.005
-        if (SPACE === true) {
-            bounce_step = -0.015;
-        }
+    if(ball.position.y > lastHeight + ballExtraHeight){
+        bounce_step = -0.005;
     }
+    if (SPACE === true && lvlCompleted === false) {
+        if (falling === false) {
+            bounce_step = -0.01;
+            falling = true
+        }
+    } else {
+        falling = false;
+    }
+    if (bounce_step < 0) {
+        if (bounce_step > -0.05){
+            bounce_step = bounce_step * 1.01;
+        }
+    } else {
+        bounce_step = bounce_step * 0.99998;
+    }
+
     ball.position.y += bounce_step;
 
     // REMOVE THE PLATFORM
@@ -266,7 +346,6 @@ function computeFrame(time) {
             newLookingHeight -=  (grossura/2 + gap);
             if (lvlPlataforms.length === 0){
                 lastHeight += gap;
-                newLookingHeight -= gap;
             }
             // sceneElements.camera.position.y -= 0.20;
         }
@@ -276,16 +355,15 @@ function computeFrame(time) {
 
 
     if (newLookingHeight < lookingHeight){
-        lookingHeight -= 0.01;
-        sceneElements.camera.position.y -= 0.01
+        lookingHeight -= Math.abs(bounce_step);
+        sceneElements.camera.position.y -= Math.abs(bounce_step)
         sceneElements.control.target.set( 0,lookingHeight,0);
     }
     
     // Rendering
     helper.render(sceneElements);
 
-    // NEW --- Update control of the camera
-    // sceneElements.control.target.set( 0,2,0 );
+    // Update control of the camera
     sceneElements.control.update();
 
     // Call for the next frame

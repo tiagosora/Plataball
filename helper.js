@@ -13,10 +13,7 @@ const helper = {
         const height = window.innerHeight;
         const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 500);
         sceneElements.camera = camera;
-        camera.position.set(2, 4, 2);
-        camera.lookAt(0, 8, 0);
         sceneElements.control = new THREE.OrbitControls(camera);
-        sceneElements.control.target.set( 0,innitLookingHeight,0 );
         sceneElements.control.screenSpacePanning = true;
 
         // Illumination
