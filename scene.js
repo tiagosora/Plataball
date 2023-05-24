@@ -8,8 +8,18 @@ const ballExtraHeight = 0.5;
 const grossura = 0.3;
 const gap = 0.05;
 const baseLargura = 0.80;
-const collumnHeight = 1000;
 const platformRotationAngle = 0.075;
+const ballColorList = [
+    0xFF0000, // RED
+    0x0000FF, // BLUE
+    0XFFFF00, // YELLOW
+    0xFF9900, // ORANGE
+    0x00FF00, // GREEN
+];
+const ballShapeList = [
+    "ball",
+    "square"
+];
 const sceneElements = {
     sceneGraph: null,
     camera: null,
@@ -17,13 +27,10 @@ const sceneElements = {
     renderer: null,
 };
 
-
-
 // Variables
 
 var lstDefTower;
-var lvlPlataforms = [];
-var bounce_step;
+var ballBounceStep;
 var lastHeight;
 var cameraHeight;
 var lookingHeight; 
@@ -31,10 +38,13 @@ var newLookingHeight;
 var lvlCompleted;
 var falling;
 var startMessage;
-var lvl = 0;
-
 var gaming;
-var plataformsBroken;
+var platformsBroken;
+var lvlPlataforms;
+var lvl;
+var colorIndex;
+var shapeIndex;
+var ballRotationStep;
 
 /// Messages
 
@@ -48,10 +58,18 @@ var SPACE = false;
 
 // Init Scene
 
+lvlPlataforms = [];
+lvl = 0;
+colorIndex = 0;
+shapeIndex = 0;
+ballRotationStep = 0.01;
+
 helper.initEmptyScene(sceneElements);
+helper.setBlackGround();
 initLevel(sceneElements.sceneGraph);
 requestAnimationFrame(computeFrame);
 createStartMessage();
+initTextHelper();
 
 // Event Listeners
 
@@ -60,6 +78,18 @@ document.addEventListener('keydown', onDocumentKeyDown, false);
 document.addEventListener('keyup', onDocumentKeyUp, false);
 
 // Functions
+
+function initTextHelper() {
+    var helperContent = `
+    <p>SPACE - Break Platform</p>
+    <p>Key R - Change Ball Color</p>
+    <p>Key K - Change Ball Shape</p>
+  `;
+  const helperContainer = document.createElement('div');
+  helperContainer.id = "helperContainer";
+  helperContainer.innerHTML = helperContent;
+  document.body.appendChild(helperContainer);
+}
 
 function resizeWindow(eventParam) {
     const width = window.innerWidth;
@@ -72,12 +102,11 @@ function resizeWindow(eventParam) {
 }
 
 function onDocumentKeyDown(event) {
-    
+    // console.log(event.keyCode)
     switch (event.keyCode) {
         case 32: // SPACE
             if (!SPACE){
                 SPACE = true;
-                // console.log(event.keyCode)
                 if (startMessage) {
                     const startMessageDiv = document.getElementById('start-message');
                     startMessageDiv.remove();
@@ -110,16 +139,46 @@ function onDocumentKeyDown(event) {
                 }
             }
             break;
-        // case 13: // ENTER
-        //     break;
+        case 82: // R
+            changeBallColor();
+            break;
+        case 75: // K
+            changeBallShape();
+            break;   
     }
 }
+
 function onDocumentKeyUp(event) {
     switch (event.keyCode) {
         case 32: // <--
             SPACE = false;
             break;
     }
+}
+
+function changeBallShape() {
+    shapeIndex = (shapeIndex + 1) % ballShapeList.length;
+    let newGeometry;
+    const ball = sceneElements.sceneGraph.getObjectByName("ball");
+    switch (ballShapeList[shapeIndex]){
+        case "ball":
+            newGeometry = new THREE.SphereGeometry(ballSize,64,32);
+            ball.geometry = newGeometry;
+            break;
+        case "square":
+            newGeometry = new THREE.BoxGeometry(2*ballSize,2*ballSize,2*ballSize);
+            ball.geometry = newGeometry;
+            break;
+    }
+    console.log(ball.geometry.parameters)
+
+}
+
+function changeBallColor() {
+    colorIndex = (colorIndex + 1) % ballColorList.length;
+    const ball = sceneElements.sceneGraph.getObjectByName("ball");
+    ball.material.color = new THREE.Color(ballColorList[colorIndex])
+
 }
 
 function createStartMessage() {
@@ -140,30 +199,29 @@ function initLevel(sceneGraph) {
     
     lvl ++;
     lstDefTower = helper.generateTowerLevels(lvl);
+    // ballBounceStep = -0.005;
     
-    // --- Add coordinate AXIS to the scene  --- 
-
-    const axes = new THREE.AxesHelper(60);
-    axes.name = "axes";
-    sceneGraph.add(axes);
-
     // --- Create the tower  --- 
 
     createLevel();
+    helper.setSpotLight(lookingHeight + 10);
+    console.log(sceneElements.sceneGraph.children.length)
+
+    // Functions
 
     function createLevel() {
         gaming = true;
-        plataformsBroken = 0;
-        bounce_step = -0.005;
+        platformsBroken = 0;
+        ballBounceStep = -0.005;
         lvlCompleted = false;
         falling = false;
 
-        createCollunm();
         createBase();
         createLvlPlataforms();
         createBall();
         adjustCamera();
         createlvlInfoMessage(lvl);
+        createCollunm();
     }
 
     function createlvlInfoMessage(lvl) {
@@ -175,7 +233,6 @@ function initLevel(sceneGraph) {
         // Append the start message to the body
         document.body.appendChild(startMessageDiv);
     }
-    
 
     function adjustCamera() {
         // --- Adjust camera to lvl ---
@@ -189,9 +246,17 @@ function initLevel(sceneGraph) {
 
     function createBall() {
         // Create Geometry
-        const ballGeometry = new THREE.SphereGeometry(ballSize,64,32);
+        let ballGeometry;
+        switch (ballShapeList[shapeIndex]){
+            case "ball":
+                ballGeometry = new THREE.SphereGeometry(ballSize,64,32);
+                break;
+            case "square":
+                ballGeometry = new THREE.BoxGeometry(2*ballSize,2*ballSize,2*ballSize);
+                break;
+        }
         // Create Material
-        const colorballMaterial = 0xFF0000;
+        const colorballMaterial = ballColorList[colorIndex];
         const ballMaterial = new THREE.MeshPhongMaterial({ color: colorballMaterial });
         // Create ball
         const ball = new THREE.Mesh( ballGeometry, ballMaterial );
@@ -209,13 +274,13 @@ function initLevel(sceneGraph) {
         let placeHeight = grossura / 4 - gap;
         let angle = 0;
         for (let i = 0; i < lstDefTower.length; i++){
-            let plataform = createPlatform(lstDefTower[i]);
+            let platform = createPlatform(lstDefTower[i]);
             placeHeight += grossura / 2 + gap;
-            plataform.position.y = placeHeight;
-            // plataform.rotation.y = angle;
-            angle -= platformRotationAngle;
-            sceneGraph.add(plataform);
-            lstPlataforms.push(plataform);
+            platform.position.y = placeHeight;
+            platform.rotation.y += angle;
+            sceneGraph.add(platform);
+            lstPlataforms.push({platform, angle});
+            angle += platformRotationAngle;
         }
 
         lastHeight = placeHeight;
@@ -224,7 +289,7 @@ function initLevel(sceneGraph) {
 
     function createPlatform(lstDefPlatform) {
         // --- Create Platform
-        const plataformGroup = new THREE.Object3D()
+        const platformGroup = new THREE.Object3D()
 
         // --- Create Peace --- 
         // Create Geometry
@@ -264,31 +329,34 @@ function initLevel(sceneGraph) {
             }
             peaceObject.rotation.x = PI/2;
             peaceObject.rotation.z += angle;
-            plataformGroup.add(peaceObject);
+            platformGroup.add(peaceObject);
 
             // let wireframe = new THREE.Mesh(peaceGeometry, wireframeMaterial);
             // wireframe.rotation.x = PI/2;
             // wireframe.rotation.z += angle;
-            // plataformGroup.add(wireframe);
+            // platformGroup.add(wireframe);
 
             angle += PI/4;
         }
         
 
         // --- Return Plataform ---
-        return plataformGroup;
+        return platformGroup;
     }
 
     function createCollunm() {
+        const collumnHeight = lastHeight+10;
+
         // Create Geometry
+        
         const collumnGeometry = new THREE.CylinderGeometry(grossura,grossura,collumnHeight,64);
         // Create Material
         const colorCollumnMaterial = 0x0FFFFF;
-        const collumnMaterial = new THREE.MeshBasicMaterial({ color: colorCollumnMaterial });
+        const collumnMaterial = new THREE.MeshToonMaterial({ color: colorCollumnMaterial });
         // Create Collumn
         const collumn = new THREE.Mesh( collumnGeometry, collumnMaterial );
         collumn.position.y = collumnHeight/2;
-        collumn.name = "collum";
+        collumn.name = "collumn";
         sceneGraph.add(collumn);
     }
 
@@ -323,13 +391,14 @@ function clearlvl(){
     sceneElements.sceneGraph.remove(base);
 
     for (let i = 0; i < lvlPlataforms.length; i++){
-        sceneElements.sceneGraph.remove(lvlPlataforms[i])
+        sceneElements.sceneGraph.remove(lvlPlataforms[i].platform)
     }
 }
 
 function computeFrame() {
 
-    function partCrashedIsSoft(angle, lastPlatform){
+    function partCrashedIsSoft(angle, lastPlatform, platformAngle){
+        angle = (angle+platformAngle)%(2*PI)
         let childIndex = (angle-angle%(PI/4))/(PI/4);
         let child = lastPlatform.children[childIndex];
         let materialColor = child.material.color;
@@ -347,7 +416,17 @@ function computeFrame() {
 
     if (gaming) {
         const ball = sceneElements.sceneGraph.getObjectByName("ball");
-        const ballSize = ball.geometry.parameters.radius;
+
+        let ballSize;
+        switch(ballShapeList[shapeIndex]) {
+            case "ball":
+                ballSize = ball.geometry.parameters.radius;
+                break;
+            case "square":
+                ballSize = ball.geometry.parameters.depth/2;
+                break;
+        }
+
         const hBall = Math.sqrt( Math.pow(ball.position.x, 2) + Math.pow(ball.position.z, 2));
         const hCamera = Math.sqrt( Math.pow(sceneElements.camera.position.x, 2) + Math.pow(sceneElements.camera.position.z, 2));
         
@@ -359,41 +438,50 @@ function computeFrame() {
         }
         ball.position.x = Math.cos(angle)*hBall;
         ball.position.z = Math.sin(angle)*hBall;
+
+        helper.moveSpotLight(ball.position.x, lookingHeight + 5, ball.position.z);
+
+
+        // ROTATE THE BALL
+
+        ball.rotation.x += ballRotationStep;
+        ball.rotation.y += ballRotationStep;
+        ball.rotation.z += ballRotationStep;
     
         // BOUNCE THE BALL
+        // console.log(ball.position.y <= lastHeight + ballSize + gap)
         
         if(ball.position.y <= lastHeight + ballSize + gap && (SPACE === false || lvlCompleted === true)){
-            bounce_step = 0.005;
+            ballBounceStep = 0.005;
         }
         if(ball.position.y > lastHeight + ballExtraHeight){
-            bounce_step = -0.005;
+            ballBounceStep = -0.005;
         }
         if (SPACE === true && lvlCompleted === false) {
             if (falling === false) {
-                bounce_step = -0.01;
+                ballBounceStep = -0.01;
                 falling = true
             }
         } else {
             falling = false;
         }
-        if (bounce_step < 0) {
-            if (bounce_step > -0.05){
-                bounce_step = bounce_step * 1.01;
+        if (ballBounceStep < 0) {
+            if (ballBounceStep > -0.05){
+                ballBounceStep = ballBounceStep * 1.01;
             }
         } else {
-            bounce_step = bounce_step * 0.99998;
+            ballBounceStep = ballBounceStep * 0.99998;
         }
     
-        ball.position.y += bounce_step;
+        ball.position.y += ballBounceStep;
     
         // REMOVE THE PLATFORM
     
-        if (lvlPlataforms.length > plataformsBroken){
-            const lastPlatform = lvlPlataforms[lvlPlataforms.length-1];
-            // console.log(angle)
-            if (ball.position.y <= lastPlatform.position.y+grossura/4+gap){
-
-                if(partCrashedIsSoft(angle, lastPlatform)){
+        if (lvlPlataforms.length > platformsBroken){
+            const lastPlatform = lvlPlataforms[lvlPlataforms.length-1].platform;
+            const platformAngle = lvlPlataforms[lvlPlataforms.length-1].angle;
+            if (ball.position.y <= lastPlatform.position.y+grossura/4+gap && SPACE){
+                if(partCrashedIsSoft(angle, lastPlatform, platformAngle)){
                     sceneElements.sceneGraph.remove(lastPlatform);
                     lvlPlataforms.splice(lvlPlataforms.length-1,1);
                     lastHeight -= (grossura/2 + gap);
@@ -446,8 +534,8 @@ function computeFrame() {
     }
 
     if (newLookingHeight < lookingHeight){
-        lookingHeight -= Math.abs(bounce_step);
-        sceneElements.camera.position.y -= Math.abs(bounce_step)
+        lookingHeight -= Math.abs(ballBounceStep);
+        sceneElements.camera.position.y -= Math.abs(ballBounceStep)
         sceneElements.control.target.set( 0,lookingHeight,0);
     }
     
