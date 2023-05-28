@@ -45,12 +45,13 @@ var lvl;
 var colorIndex;
 var shapeIndex;
 var ballRotationStep;
+var record;
 
 /// Messages
 
-var lvlInfoMessage;
 var lvlCompletedMessage;
 var gameOverMessage;
+var recordMessage;
 
 // Keys
 
@@ -63,13 +64,14 @@ lvl = 0;
 colorIndex = 0;
 shapeIndex = 0;
 ballRotationStep = 0.01;
+record = 0;
 
 helper.initEmptyScene(sceneElements);
 helper.setBlackGround();
+helper.initTextHelper();
 initLevel(sceneElements.sceneGraph);
 requestAnimationFrame(computeFrame);
 createStartMessage();
-initTextHelper();
 
 // Event Listeners
 
@@ -78,18 +80,6 @@ document.addEventListener('keydown', onDocumentKeyDown, false);
 document.addEventListener('keyup', onDocumentKeyUp, false);
 
 // Functions
-
-function initTextHelper() {
-    var helperContent = `
-    <p>SPACE - Break Platform</p>
-    <p>Key R - Change Ball Color</p>
-    <p>Key K - Change Ball Shape</p>
-  `;
-  const helperContainer = document.createElement('div');
-  helperContainer.id = "helperContainer";
-  helperContainer.innerHTML = helperContent;
-  document.body.appendChild(helperContainer);
-}
 
 function resizeWindow(eventParam) {
     const width = window.innerWidth;
@@ -120,6 +110,9 @@ function onDocumentKeyDown(event) {
     
                         const lvlDiv = document.getElementById('lvl-message');
                         lvlDiv.remove();
+
+                        const recordDiv = document.getElementById('record-message');
+                        recordDiv.remove();
                     }
                     lvl = 0;
                     clearlvl();
@@ -133,6 +126,9 @@ function onDocumentKeyDown(event) {
     
                         const lvlDiv = document.getElementById('lvl-message');
                         lvlDiv.remove();
+
+                        const recordDiv = document.getElementById('record-message');
+                        recordDiv.remove();
                     }
                     clearlvl();
                     initLevel(sceneElements.sceneGraph);
@@ -220,19 +216,31 @@ function initLevel(sceneGraph) {
         createLvlPlataforms();
         createBall();
         adjustCamera();
-        createlvlInfoMessage(lvl);
+        createRecordInfoMessage();
+        createlvlInfoMessage();
         createCollunm();
     }
 
-    function createlvlInfoMessage(lvl) {
+    function createlvlInfoMessage() {
         // Create a div element for the start message
-        const startMessageDiv = document.createElement('div');
-        startMessageDiv.id = 'lvl-message';
-        startMessageDiv.textContent = 'Level '+lvl.toString();
+        const recordMessageDiv = document.createElement('div');
+        recordMessageDiv.id = 'lvl-message';
+        recordMessageDiv.textContent = 'LEVEL '+lvl.toString();
     
         // Append the start message to the body
-        document.body.appendChild(startMessageDiv);
+        document.body.appendChild(recordMessageDiv);
     }
+
+    function createRecordInfoMessage() {
+        // Create a div element for the start message
+        const lvlMessageDiv = document.createElement('div');
+        lvlMessageDiv.id = 'record-message';
+        lvlMessageDiv.textContent = 'RECORD: '+record.toString();
+    
+        // Append the start message to the body
+        document.body.appendChild(lvlMessageDiv);
+    }
+
 
     function adjustCamera() {
         // --- Adjust camera to lvl ---
@@ -330,11 +338,6 @@ function initLevel(sceneGraph) {
             peaceObject.rotation.x = PI/2;
             peaceObject.rotation.z += angle;
             platformGroup.add(peaceObject);
-
-            // let wireframe = new THREE.Mesh(peaceGeometry, wireframeMaterial);
-            // wireframe.rotation.x = PI/2;
-            // wireframe.rotation.z += angle;
-            // platformGroup.add(wireframe);
 
             angle += PI/4;
         }
@@ -492,6 +495,10 @@ function computeFrame() {
                 } else {
                     gaming = false;
 
+                    if(record < lvl){
+                        record = lvl;
+                    }
+
                     const gameOverDiv = document.createElement('div');
 
                     gameOverDiv.id = 'game-over-message';
@@ -516,7 +523,7 @@ function computeFrame() {
 
                 lvlCompletedDiv.id = 'lvl-completed-message';
                 const gameover = document.createElement('p');
-                gameover.textContent = "Nice, Level Completed";
+                gameover.textContent = "Level Completed";
                 gameover.style.textAlign = "center";
                 gameover.style.marginBottom = "0px";
                 const restart = document.createElement('p');

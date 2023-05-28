@@ -144,5 +144,39 @@ const helper = {
             }
         }
         return level;
-    }
+    },
+
+    initTextHelper: function() {
+        var helperContent = `
+          <div class="game-controls">
+            <table>
+              <tr>
+                <th class="key">Key</th>
+                <th class="separator"></th>
+                <th>Action</th>
+              </tr>
+              <tr>
+                <td>SPACE</td>
+                <td class="separator"></td>
+                <td>Break the Platform</td>
+              </tr>
+              <tr>
+                <td>R</td>
+                <td class="separator"></td>
+                <td>Change Ball Color</td>
+              </tr>
+              <tr>
+                <td>K</td>
+                <td class="separator"></td>
+                <td>Change Ball Shape</td>
+              </tr>
+            </table>
+          </div>
+        `;
+        const helperContainer = document.createElement('div');
+        helperContainer.id = "helperContainer";
+        helperContainer.innerHTML = helperContent;
+        document.body.appendChild(helperContainer);
+      }
+      
 };
