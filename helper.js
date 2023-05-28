@@ -2,7 +2,7 @@
 
 const helper = {
 
-    initEmptyScene: function (sceneElements, innitLookingHeight) {
+    initEmptyScene: function (sceneElements) {
 
         // Create the 3D scene
         sceneElements.sceneGraph = new THREE.Scene();
@@ -36,8 +36,10 @@ const helper = {
     },
 
     setBlackGround: function() {
+
         let starGeo = new THREE.Geometry();
-        for(let i=0;i<6000;i++) {
+
+        for(let i = 0; i < 6000; i++) {
             let star = new THREE.Vector3(
                 Math.random() * 600 - 300,
                 Math.random() * 600 - 300,
@@ -90,6 +92,7 @@ const helper = {
         sceneElements.renderer.render(sceneElements.sceneGraph, sceneElements.camera);
     },
 
+    // THIS FUNCTION CREATES A (SORT OF) RANDOM TOWER FOR THE LEVEL THE PLAYER IS IN
     generateTowerLevels: function(levelNumber) {
 
         function probabilityFunction(x) {
@@ -177,6 +180,267 @@ const helper = {
         helperContainer.id = "helperContainer";
         helperContainer.innerHTML = helperContent;
         document.body.appendChild(helperContainer);
-      }
-      
+    },
+
+    initLevel: function(sceneGraph) {
+
+        //  Init Variables 
+        
+        lvl ++;
+        gaming = true;
+        ballBounceStep = -0.005;
+        lvlCompleted = false;
+        falling = false;
+        
+        //  Create the tower   
+        let lstDefTower = helper.generateTowerLevels(lvl);
+
+        createBase();
+        createLvlPlataforms();
+        createBall();
+        adjustCamera();
+        createCollunm();
+        createRecordInfoMessage();
+        createlvlInfoMessage();
+
+        helper.setSpotLight(lookingHeight + 10);
+
+        // Functions
+
+        // Function to Display the Top Left Level in the Window
+        function createlvlInfoMessage() {
+
+            // Create a div element for the start message
+            const lvlMessageDiv = document.createElement('div');
+            lvlMessageDiv.id = 'lvl-message';
+            lvlMessageDiv.textContent = 'LEVEL '+lvl.toString();
+
+            // Append the start message to the body
+            document.body.appendChild(lvlMessageDiv);
+
+            // Save Div
+            lvlMessage = lvlMessageDiv;
+        }
+
+        // Function to Display the Top Left Record in the Window
+        function createRecordInfoMessage() {
+
+            // Create a div element for the start message
+            const recordMessageDiv = document.createElement('div');
+            recordMessageDiv.id = 'record-message';
+            recordMessageDiv.textContent = 'RECORD: '+record.toString();
+        
+            // Append the start message to the body
+            document.body.appendChild(recordMessageDiv);
+
+            // Save Div
+            recordMessage = recordMessageDiv;
+        }
+
+        // Function to adjust the camera to the new ball
+        function adjustCamera() {
+            
+            cameraHeight = lastHeight + 1.5;
+            lookingHeight = cameraHeight - 2;
+            newLookingHeight = lookingHeight;
+
+            sceneElements.camera.position.set(2.5, cameraHeight, 2.5);
+            sceneElements.control.target.set(0, lookingHeight, 0);
+        }
+
+        // Function to create the Player's Ball
+        function createBall() {
+
+            // Create Geometry
+            let ballGeometry;
+            switch (ballShapeList[shapeIndex]){
+                case "ball":
+                    ballGeometry = new THREE.SphereGeometry(ballSize,64,32);
+                    break;
+                case "square":
+                    ballGeometry = new THREE.BoxGeometry(2*ballSize,2*ballSize,2*ballSize);
+                    break;
+            }
+
+            // Create Material
+            const ballMaterial = new THREE.MeshPhongMaterial({ color: ballColorList[colorIndex] });
+
+            // Create ball
+            const ball = new THREE.Mesh( ballGeometry, ballMaterial );
+            
+            // Ball Position and Define Atributes
+            ball.position.x = 0.50*Math.cos(PI/4)
+            ball.position.z = 0.50*Math.cos(PI/4)
+            ball.position.y = lastHeight+ballExtraHeight;
+            ball.name = "ball";
+
+            // Add ball to the scene
+            sceneGraph.add(ball);
+        }
+
+        function createLvlPlataforms() {
+            let lstPlataforms = [];
+
+            let placeHeight = grossura / 4 - gap;
+            let angle = 0;
+
+            for (let i = 0; i < lstDefTower.length; i++){
+                let platform = createPlatform(lstDefTower[i]);
+
+                placeHeight += grossura / 2 + gap;
+                platform.position.y = placeHeight;
+                platform.rotation.y += angle;
+
+                sceneGraph.add(platform);
+                lstPlataforms.push({platform, angle});
+
+                angle += platformRotationAngle;
+            }
+
+            lastHeight = placeHeight;
+            lvlPlataforms = lstPlataforms;
+        }
+
+        function createPlatform(lstDefPlatform) {
+
+            // Create the plataform 
+            const platformGroup = new THREE.Object3D()
+
+            // Create Geometry of the Piece
+
+            const peaceGeometry = new THREE.TorusGeometry(0.7, grossura, 4, 1, PI/4);
+            for (let i = 0; i < peaceGeometry.vertices.length; i ++){
+                let altura = grossura/4;
+                if (i < 4) {
+                    peaceGeometry.vertices[i].z = altura;
+                    if (i < 2) {
+                        peaceGeometry.vertices[i].x = peaceGeometry.vertices[i+6].x
+                        peaceGeometry.vertices[i].y = peaceGeometry.vertices[i+6].y
+                    }
+                    else {
+                        peaceGeometry.vertices[i].x = peaceGeometry.vertices[i+2].x
+                        peaceGeometry.vertices[i].y = peaceGeometry.vertices[i+2].y
+                    }
+                } else {
+                    peaceGeometry.vertices[i].z = -altura;
+                }
+            }
+
+            // Create Material the possible Materials for the Piece
+
+            const softMaterial = new THREE.MeshPhongMaterial({ color: 0x0095DD });
+            const hardMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
+            
+            //  Create the Pieces 
+
+            let angle = 0;
+            for (let i = 0; i < 8; i++){
+                let peaceObject;
+
+                // X in the Tower Model define the Hard Pieces
+                if (lstDefPlatform[i] == "X") { 
+                    peaceObject = new THREE.Mesh(peaceGeometry, hardMaterial);
+
+                // O in the Tower Model define the Soft Pieces
+                } else {
+                    peaceObject = new THREE.Mesh(peaceGeometry, softMaterial);
+                }
+
+                peaceObject.rotation.x = PI/2;
+                peaceObject.rotation.z += angle;
+                platformGroup.add(peaceObject);
+
+                angle += PI/4;
+            }
+
+            // Return Plataform 
+            return platformGroup;
+        }
+
+        function createCollunm() {
+
+            const collumnHeight = lastHeight+10;
+
+            // Create Geometry
+            const collumnGeometry = new THREE.CylinderGeometry(grossura,grossura,collumnHeight,64);
+
+            // Create Material
+            const collumnMaterial = new THREE.MeshToonMaterial({ color: 0xCCDDD3 });
+
+            // Create Collumn
+            const collumn = new THREE.Mesh( collumnGeometry, collumnMaterial );
+
+            collumn.position.y = collumnHeight/2;
+            collumn.name = "collumn";
+
+            sceneGraph.add(collumn);
+        }
+
+        function createBase(){
+            // Create Geometry
+            const baseGeometry = new THREE.CylinderGeometry(baseLargura, baseLargura, grossura / 2, 64);
+
+            // Create Material
+            const baseMaterial = new THREE.MeshPhongMaterial({ color: 0xDFEFCA });
+
+            // Create Base
+            const base =  new THREE.Mesh(baseGeometry, baseMaterial);
+            base.position.y = grossura/4;
+            base.name = "base";
+
+            sceneGraph.add(base);
+        }
+    },
+
+    lvlCompleteMessage: function() {
+
+        // Create the Div
+        const lvlCompletedDiv = document.createElement('div');
+        lvlCompletedDiv.id = 'lvl-completed-message';
+        
+        // Create the Content
+        const lvlcompleted = document.createElement('p');
+        lvlcompleted.textContent = "Level Completed";
+        lvlcompleted.style.textAlign = "center";
+        lvlcompleted.style.marginBottom = "0px";
+        lvlCompletedDiv.appendChild(lvlcompleted);
+
+        // Create the Content
+        const continueP = document.createElement('p');
+        continueP.style.marginTop = "0px";
+        continueP.textContent = "Press SPACE to Continue";
+        lvlCompletedDiv.appendChild(continueP);
+
+        // Append the message to the body
+        document.body.appendChild(lvlCompletedDiv);
+
+        // Save the Div
+        lvlCompletedMessage = lvlCompletedDiv;
+    },
+
+    gameOverMessage: function() {
+
+        // Create the Div
+        const gameOverDiv = document.createElement('div');
+        gameOverDiv.id = 'game-over-message';
+
+        // Create the Content
+        const gameover = document.createElement('p');
+        gameover.textContent = "Game Over";
+        gameover.style.textAlign = "center";
+        gameover.style.marginBottom = "0px";
+        gameOverDiv.appendChild(gameover);
+
+        // Create the Content
+        const restart = document.createElement('p');
+        restart.style.marginTop = "0px";
+        restart.textContent = "Press SPACE to Restart";
+        gameOverDiv.appendChild(restart);
+        
+        // Append the message to the body
+        document.body.appendChild(gameOverDiv);
+
+        // Save the Div
+        gameOverMessage = gameOverDiv;
+    }
 };
