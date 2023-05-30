@@ -151,31 +151,37 @@ const helper = {
 
     initTextHelper: function() {
         var helperContent = `
-          <div class="game-controls">
-            <table>
-              <tr>
-                <th class="key">Key</th>
-                <th class="separator"></th>
-                <th>Action</th>
-              </tr>
-              <tr>
-                <td>SPACE</td>
-                <td class="separator"></td>
-                <td>Break the Platform</td>
-              </tr>
-              <tr>
-                <td>R</td>
-                <td class="separator"></td>
-                <td>Change Ball Color</td>
-              </tr>
-              <tr>
-                <td>K</td>
-                <td class="separator"></td>
-                <td>Change Ball Shape</td>
-              </tr>
-            </table>
-          </div>
+            <div class="game-controls">
+                <table>
+                    <tr>
+                        <th class="key">Key</th>
+                        <th class="separator"></th>
+                        <th>Action</th>
+                    </tr>
+                    <tr>
+                        <td>SPACE</td>
+                        <td class="separator"></td>
+                        <td>Break Platform</td>
+                    </tr>
+                    <tr>
+                        <td>Mouse Drag</th>
+                        <td class="separator"></th>
+                        <td>Move Camera</th>
+                    </tr>
+                    <tr>
+                        <td>R</td>
+                        <td class="separator"></td>
+                        <td>Change Ball Color</td>
+                    </tr>
+                    <tr>
+                        <td>K</td>
+                        <td class="separator"></td>
+                        <td>Change Ball Shape</td>
+                    </tr>
+                </table>
+            </div>
         `;
+        
         const helperContainer = document.createElement('div');
         helperContainer.id = "helperContainer";
         helperContainer.innerHTML = helperContent;
@@ -442,5 +448,71 @@ const helper = {
 
         // Save the Div
         gameOverMessage = gameOverDiv;
-    }
+    },
+
+    // Function Used to Change the Shape of the Player's "Ball"
+    changeBallShape: function() {
+
+        // New shape
+        shapeIndex = (shapeIndex + 1) % ballShapeList.length;
+
+        // Get current "ball"
+        const ball = sceneElements.sceneGraph.getObjectByName("ball");
+
+        switch (ballShapeList[shapeIndex]){
+            // New shape is SphereGeometry
+            case "ball":
+                ball.geometry = new THREE.SphereGeometry(ballSize, 64, 32);
+                break;
+
+            // New shape is BoxGeometry
+            case "square":
+                ball.geometry = new THREE.BoxGeometry(2 * ballSize, 2 * ballSize, 2 * ballSize);
+                break;
+        }
+    },
+
+    // Function Used to Change the Color of the Player's "Ball"
+    changeBallColor: function() {
+
+        // New Color
+        colorIndex = (colorIndex + 1) % ballColorList.length;
+
+        // Get current ball
+        const ball = sceneElements.sceneGraph.getObjectByName("ball");
+
+        // Apply new color
+        ball.material.color = new THREE.Color(ballColorList[colorIndex])
+    },
+
+    // Function to create a new "Press Start" Message
+    createStartMessage: function() {
+
+        // Create a div element with the message content
+        const startMessageDiv = document.createElement('div');
+        startMessageDiv.id = 'start-message';
+        startMessageDiv.textContent = 'Press SPACE to Start';
+    
+        // Append the start message to the body
+        document.body.appendChild(startMessageDiv);
+    
+        // Save Div
+        startMessage = startMessageDiv;
+    },
+
+    // Function to create the bottom-right COPYRIGHTS Message
+    createCopyrightsMessage: function() {
+
+        // Create a div element with the message content
+        const startMessageDiv = document.createElement('div');
+        startMessageDiv.id = 'copyrights-message';
+        startMessageDiv.textContent = 'Dzained by Tiago Sora';
+    
+        // Append the start message to the body
+        document.body.appendChild(startMessageDiv);
+    
+        // Save Div
+        startMessage = startMessageDiv;
+    },
+
 };

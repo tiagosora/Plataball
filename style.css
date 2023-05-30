@@ -78,6 +78,16 @@ body {
     font-size: 20px;
 }
 
+#copyrights-message {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    font-family: 'Orbitron', sans-serif;
+    color: white;
+    padding: 0px 10px;
+    font-size: 10px;
+}
+
 
 table {
     border-collapse: collapse;
